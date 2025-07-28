@@ -1,0 +1,102 @@
+# User configuration
+cluster:
+  name: ""                    # Required
+client:
+  id: ""                      # Required  
+  username: ""                # Required
+  password: ""                # Required
+metrics:
+  server:
+    endpoint: ""              # Required
+
+# Vector chart configuration (passed through to dependency)
+vector:
+  # role -- [Role](https://vector.dev/docs/setup/deployment/roles/) for this Vector instance, valid options are:
+  # "Agent", "Aggregator", and "Stateless-Aggregator".
+
+  # Each role is created with the following workloads:
+  # Agent = DaemonSet
+  # Aggregator = StatefulSet
+  # Stateless-Aggregator = Deployment
+  role: "Agent"
+  
+  # Use our custom config instead of Vector's default
+  customConfig:
+    data_dir: "/var/lib/vector"
+    api:
+      enabled: true
+      address: "0.0.0.0:8686"
+    
+    sources:
+      node_metrics:
+        type: "prometheus_scrape"
+        endpoints: ["http://localhost:9100/metrics"]
+        scrape_interval_secs: 30
+        honor_labels: true
+      
+      kubelet_metrics:
+        type: "prometheus_scrape"
+        endpoints: ["https://localhost:10250/metrics"]
+        scrape_interval_secs: 30
+        tls:
+          verify_certificate: false
+      
+      cadvisor_metrics:
+        type: "prometheus_scrape"
+        endpoints: ["https://localhost:10250/metrics/cadvisor"]
+        scrape_interval_secs: 30
+        tls:
+          verify_certificate: false
+      
+      vector_metrics:
+        type: "internal_metrics"
+    
+    transforms:
+      add_node_labels:
+        type: "remap"
+        inputs: ["node_metrics", "kubelet_metrics", "cadvisor_metrics"]
+        source: |
+          .node_name = get_env_var!("NODE_NAME")
+          .cluster_name = "{{ .Values.cluster.name }}"
+          .client_id = "{{ .Values.client.id }}"
+      
+      process_vector_metrics:
+        type: "remap"
+        inputs: ["vector_metrics"]
+        source: |
+          .node_name = get_env_var!("NODE_NAME")
+          .cluster_name = "{{ .Values.cluster.name }}"
+          .client_id = "{{ .Values.client.id }}"
+    
+    sinks:
+      prometheus_exporter:
+        type: "prometheus_exporter"
+        inputs: ["add_node_labels", "process_vector_metrics"]
+        address: "0.0.0.0:9598"
+      
+      metrics_server:
+        type: "prometheus_remote_write"
+        inputs: ["add_node_labels", "process_vector_metrics"]
+        endpoint: "{{ .Values.metrics.server.endpoint }}"
+        auth:
+          strategy: "basic"
+          user: "{{ .Values.client.username }}"
+          password: "{{ .Values.client.password }}"
+
+  # Vector chart settings
+  serviceAccount:
+    create: false
+    name: "vector-metrics-agent"
+  
+  service:
+    enabled: true
+    ports:
+      - name: prom-exporter
+        port: 9598
+        targetPort: 9598
+  
+  env:
+    - name: NODE_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
