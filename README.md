@@ -72,6 +72,10 @@ helm install metrics-agent . \
 
 # Access metrics endpoint
 kubectl port-forward daemonset/test-metrics 9598:9598
+
+# Publish
+helm package .
+helm push vector-metrics-agent-0.1.0.tgz oci://your-registry.com/charts
 ```
 
 ## Troubleshooting
