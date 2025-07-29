@@ -1,0 +1,80 @@
+# Helm chart packaging and dependencies
+*.tgz
+charts/
+Chart.lock
+
+# Helm local development
+.helmignore
+
+# Temporary files from chart testing
+test-values.yaml
+debug-values.yaml
+local-values.yaml
+
+# Development and testing artifacts
+.tmp/
+tmp/
+temp/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Operating system files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Secrets and credentials (never commit these!)
+*secret*
+*credential*
+*password*
+*.key
+*.pem
+*.crt
+.env
+.env.local
+
+# CI/CD artifacts
+.github/workflows/test-*
+*.log
+
+# Chart museum or registry artifacts
+index.yaml
+index-cache.yaml
+
+# Backup files
+*.backup
+*.bak
+*.orig
+
+# Node modules (if using any JS tools)
+node_modules/
+package-lock.json
+
+# Python virtual environments (if using any Python tools)
+venv/
+__pycache__/
+*.pyc
+
+# Go modules (if using any Go tools)
+go.mod
+go.sum
+
+# Terraform files (if using IaC)
+*.tfstate
+*.tfstate.backup
+.terraform/
+
+# Kubernetes test artifacts
+test-namespace.yaml
+test-pods.yaml
