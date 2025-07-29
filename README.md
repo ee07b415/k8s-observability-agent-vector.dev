@@ -15,6 +15,35 @@ helm install metrics-agent oci://your-registry.com/charts/vector-metrics-agent \
   --set metrics.server.endpoint="https://your-metrics-server.com/api/v1/write"
 ```
 
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Kubernetes Node                          │
+│                                                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│  │   Kubelet    │  │ Node Exporter│  │   cAdvisor   │       │
+│  │   :10250     │  │    :9100     │  │   :10250     │       │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘       │
+│         │                 │                 │               │
+│         └─────────────────┼─────────────────┘               │
+│                           │                                 │
+│  ┌────────────────────────▼────────────────────────────┐    │
+│  │              Vector Agent (DaemonSet)               │    │
+│  │  ┌─────────────┐  ┌──────────────┐  ┌─────────────┐ │    │
+│  │  │  Collector  │  │ 20GB Buffer  │  │  Exporter   │ │    │
+│  │  │             │  │   (Disk)     │  │   :9598     │ │    │
+│  │  └─────────────┘  └──────────────┘  └─────────────┘ │    │
+│  └────────────────────────┬────────────────────────────┘    │
+└───────────────────────────┼─────────────────────────────────┘
+                            │
+              ┌─────────────▼─────────────┐
+              │    Remote Metrics Server  │
+              │  (Prometheus Remote Write)│
+              │  (Central vector agg)     │
+              └───────────────────────────┘
+```
+
 ## Required Configuration
 
 | Parameter | Description | Example |
