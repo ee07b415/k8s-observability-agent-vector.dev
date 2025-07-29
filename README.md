@@ -36,8 +36,30 @@ client:
   username: "vector-user"
   password: "secure-password"
 metrics:
+  prom_server:
+    endpoint: "https://prometheus.metrics.example.com/write"
   server:
     endpoint: "https://metrics.acme.com/api/v1/write"
+```
+
+## Authentication by secret file
+```bash
+kubectl create secret generic metrics-credentials \
+  --from-literal=password="my-secret-password"
+
+helm install metrics-agent . \
+  --set client.passwordSecret.name="metrics-credentials" \
+  --set client.passwordSecret.key="password" \
+```
+
+```yaml
+# values.yaml
+client:
+  id: "prod-001"
+  username: "metrics-user"
+  passwordSecret:
+    name: "metrics-credentials"
+    key: "password"
 ```
 
 ```bash
@@ -68,6 +90,7 @@ helm install metrics-agent . \
   --set client.id="client-001" \
   --set client.username="user" \
   --set client.password="pass" \
+  --set metrics.prom_server.endpoint="https://prometheus.metrics.example.com/write" \
   --set metrics.server.endpoint="https://metrics.example.com/write"
 
 # Access metrics endpoint

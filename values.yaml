@@ -4,8 +4,13 @@ cluster:
 client:
   id: ""                      # Required  
   username: ""                # Required
-  password: ""                # Required
+  password: ""                # Optional: Direct password
+  passwordSecret:             # Optional: Reference to existing secret
+    name: ""                  # Secret name (e.g., "metrics-credentials")
+    key: ""                   # Secret key (e.g., "password")
 metrics:
+  prom_server:
+    endpoint: ""              # Required
   server:
     endpoint: ""              # Required
 
@@ -31,20 +36,20 @@ vector:
       node_metrics:
         type: "prometheus_scrape"
         endpoints: ["http://localhost:9100/metrics"]
-        scrape_interval_secs: 30
+        scrape_interval_secs: 60
         honor_labels: true
       
       kubelet_metrics:
         type: "prometheus_scrape"
         endpoints: ["https://localhost:10250/metrics"]
-        scrape_interval_secs: 30
+        scrape_interval_secs: 60
         tls:
           verify_certificate: false
       
       cadvisor_metrics:
         type: "prometheus_scrape"
         endpoints: ["https://localhost:10250/metrics/cadvisor"]
-        scrape_interval_secs: 30
+        scrape_interval_secs: 60
         tls:
           verify_certificate: false
       
@@ -77,11 +82,37 @@ vector:
       metrics_server:
         type: "prometheus_remote_write"
         inputs: ["add_node_labels", "process_vector_metrics"]
-        endpoint: "{{ .Values.metrics.server.endpoint }}"
+        endpoint: "{{ .Values.metrics.prom_server.endpoint }}"
         auth:
           strategy: "basic"
           user: "{{ .Values.client.username }}"
-          password: "{{ .Values.client.password }}"
+          password: "${CLIENT_PASSWORD}"
+        batch:
+          max_events: 5000
+          timeout_secs: 10
+        buffer:
+          type: disk
+          # 20GB should be enough for 24 hours
+          max_size: 21474836480
+          when_full: drop_newest
+
+      central_metrics_server:
+        type: "vector"
+        inputs: ["add_node_labels", "process_vector_metrics"]
+        address: "{{ .Values.metrics.server.endpoint }}"
+        auth:
+          strategy: "basic"
+          user: "{{ .Values.client.username }}"
+          password: "${CLIENT_PASSWORD}"
+        batch:
+          max_events: 5000
+          timeout_secs: 10
+        buffer:
+          type: disk
+          # 20GB should be enough for 24 hours
+          max_size: 21474836480
+          when_full: drop_newest
+
 
   # Vector chart settings
   serviceAccount:
@@ -100,3 +131,13 @@ vector:
       valueFrom:
         fieldRef:
           fieldPath: spec.nodeName
+    {{- if .Values.client.passwordSecret.name }}
+    - name: CLIENT_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: {{ .Values.client.passwordSecret.name }}
+          key: {{ .Values.client.passwordSecret.key }}
+    {{- else }}
+    - name: CLIENT_PASSWORD
+      value: {{ .Values.client.password | quote }}
+    {{- end }}
