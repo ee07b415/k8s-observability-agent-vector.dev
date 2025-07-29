@@ -4,6 +4,32 @@ A simple Helm chart for collecting Kubernetes metrics using Vector. Automaticall
 This helm chart is designed to simply the setting to deploy the metrics agent using vector.dev in k8s environment, limit the use case to trade for
 simplicity. 
 
+## Prerequisites
+
+In order to meet the SOC 2 complaince, the TLS is a required field please install the cert manager before install this chart
+```bash
+# Install cert-manager in your cluster (one-time setup)
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+
+# Create a ClusterIssuer (example with Let's Encrypt)
+kubectl apply -f - <<EOF
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: admin@yourcompany.com
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+    - http01:
+        ingress:
+          class: nginx
+EOF
+```
+
 ## Quick Install
 
 ```bash

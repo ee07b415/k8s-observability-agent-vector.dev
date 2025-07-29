@@ -1,0 +1,17 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "vector-metrics-agent.fullname" . }}-tls
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "vector-metrics-agent.labels" . | nindent 4 }}
+spec:
+  secretName: {{ .Values.metrics.tls.secretName }}
+  issuerRef:
+    name: {{ .Values.metrics.tls.issuer }}
+    kind: ClusterIssuer
+  dnsNames:
+    - {{ .Values.client.id }}.metrics.local  # Client-specific certificate
+  commonName: {{ .Values.client.id }}.metrics.local
+  duration: 2160h  # 90 days
+  renewBefore: 360h  # 15 days before expiry

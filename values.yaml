@@ -13,6 +13,9 @@ metrics:
     endpoint: ""              # Required
   server:
     endpoint: ""              # Required
+  tls:
+    issuer: "letsencrypt-prod"    # Default issuer (can be overridden)
+    secretName: "metrics-tls"     # Where cert-manager stores the cert
 
 # Vector chart configuration (passed through to dependency)
 vector:
@@ -95,6 +98,11 @@ vector:
           # 20GB should be enough for 24 hours
           max_size: 21474836480
           when_full: drop_newest
+        tls:
+          verify_certificate: true
+          verify_hostname: true
+          crt_file: "/etc/ssl/certs/tls.crt"
+          key_file: "/etc/ssl/private/tls.key"
 
       central_metrics_server:
         type: "vector"
@@ -112,6 +120,11 @@ vector:
           # 20GB should be enough for 24 hours
           max_size: 21474836480
           when_full: drop_newest
+        tls:
+          verify_certificate: true
+          verify_hostname: true
+          crt_file: "/etc/ssl/certs/tls.crt"
+          key_file: "/etc/ssl/private/tls.key"
 
 
   # Vector chart settings
@@ -126,6 +139,23 @@ vector:
         port: 9598
         targetPort: 9598
   
+# Certificate volume mounts
+  extraVolumeMounts:
+    - name: tls-certs
+      mountPath: /etc/ssl/certs/tls.crt
+      subPath: tls.crt
+      readOnly: true
+    - name: tls-certs
+      mountPath: /etc/ssl/private/tls.key
+      subPath: tls.key
+      readOnly: true
+  
+  # Certificate volumes
+  extraVolumes:
+    - name: tls-certs
+      secret:
+        secretName: {{ .Values.metrics.tls.certManager.secretName }}
+
   env:
     - name: NODE_NAME
       valueFrom:
